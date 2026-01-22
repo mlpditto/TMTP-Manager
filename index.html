@@ -3,12 +3,11 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>TMTP Manager v8.0</title>
+    <title>TMTP Manager v8.1</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <link href="https://fonts.googleapis.com/css2?family=Prompt:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
-    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     
     <script>
         tailwind.config = {
@@ -26,6 +25,7 @@
     </script>
 
     <style>
+        /* Base Styles */
         ::-webkit-scrollbar { width: 8px; height: 8px; }
         ::-webkit-scrollbar-track { background: transparent; }
         ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
@@ -54,6 +54,7 @@
         
         .btn-secondary { @apply px-4 py-2 rounded-xl border-2 border-slate-200 dark:border-slate-600 text-slate-600 dark:text-slate-300 font-bold hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors text-xs flex items-center justify-center; }
         .btn-xs { @apply px-3 py-1 rounded text-xs font-bold shadow-sm transition-transform active:scale-95; }
+        .nav-fab { @apply w-12 h-12 bg-slate-700 dark:bg-slate-600 text-white rounded-full shadow-xl flex items-center justify-center hover:bg-slate-800 dark:hover:bg-slate-500 transition-all duration-300; }
 
         @media print {
             body > * { display: none !important; }
@@ -71,23 +72,25 @@
 <body class="bg-slate-50 text-slate-800 dark:bg-dark-bg dark:text-dark-text transition-colors duration-300 pb-32">
 
     <div id="loginScreen" class="fixed inset-0 bg-slate-100 dark:bg-dark-bg z-[200] flex flex-col items-center justify-center p-4">
-        <div class="bg-white dark:bg-dark-card p-8 rounded-3xl shadow-2xl w-full max-w-md border border-slate-200 dark:border-slate-700 text-center">
+        <div class="bg-white dark:bg-dark-card p-8 rounded-3xl shadow-2xl w-full max-w-sm border border-slate-200 dark:border-slate-700 text-center">
             <div class="w-16 h-16 rounded-2xl grad-blue flex items-center justify-center text-white shadow-lg mx-auto mb-6">
-                <i class="fa-solid fa-shield-halved text-3xl"></i>
+                <i class="fa-solid fa-lock text-3xl"></i>
             </div>
-            <h1 class="text-2xl font-bold mb-2">TMTP Manager</h1>
-            <p class="text-slate-500 dark:text-slate-400 mb-8 text-sm">กรุณาเข้าสู่ระบบเพื่อใช้งาน</p>
+            <h1 class="text-2xl font-bold mb-2">เข้าสู่ระบบ</h1>
+            <p class="text-slate-500 dark:text-slate-400 mb-6 text-sm">กรุณากรอกรหัสผ่านเพื่อใช้งาน</p>
+            
             <div class="space-y-4">
-                <input type="email" id="userEmail" placeholder="ระบุอีเมลของคุณ..." class="w-full px-4 py-3 rounded-xl border border-slate-200 dark:border-slate-600 bg-slate-50 dark:bg-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all text-center">
-                <button onclick="handleMagicLogin()" id="btnLogin" class="w-full py-3 rounded-xl grad-blue text-white font-bold shadow-lg hover:opacity-90 transition-all active:scale-95">
-                    <i class="fa-solid fa-wand-magic-sparkles mr-2"></i> ส่ง Magic Link
+                <input type="password" id="passcodeInput" placeholder="รหัสผ่าน" class="w-full px-4 py-3 rounded-xl border border-slate-200 dark:border-slate-600 bg-slate-50 dark:bg-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all text-center tracking-widest text-lg" onkeyup="if(event.key==='Enter') checkPasscode()">
+                <button onclick="checkPasscode()" class="w-full py-3 rounded-xl grad-blue text-white font-bold shadow-lg hover:opacity-90 transition-all active:scale-95">
+                    เข้าสู่ระบบ <i class="fa-solid fa-arrow-right ml-2"></i>
                 </button>
             </div>
-            <p id="loginStatus" class="mt-4 text-xs text-blue-500 font-medium h-5"></p>
+            <p id="loginError" class="mt-4 text-xs text-red-500 font-bold h-5"></p>
         </div>
     </div>
 
     <div id="appContainer" class="hidden">
+        
         <div id="loadingOverlay" class="fixed inset-0 bg-white/80 dark:bg-black/80 z-[100] flex flex-col items-center justify-center hidden backdrop-blur-sm">
             <div class="loader mb-4"></div><p class="font-bold text-slate-600 dark:text-slate-300 animate-pulse">Processing...</p>
         </div>
@@ -101,7 +104,7 @@
                         </div>
                         <div>
                             <h1 class="text-xl font-bold leading-tight">TMTP <span class="text-blue-500 dark:text-blue-400">Manager</span></h1>
-                            <p class="text-[10px] text-slate-400 font-medium uppercase tracking-wider">v8.0 Analytics UI</p>
+                            <p class="text-[10px] text-slate-400 font-medium uppercase tracking-wider">v8.1 Passcode Login</p>
                         </div>
                     </div>
                     <div class="flex items-center gap-3">
@@ -111,13 +114,14 @@
                             <button onclick="switchTab('changelog')" id="tab-changelog" class="px-4 py-1.5 rounded-lg text-sm font-bold text-slate-500 dark:text-slate-400 hover:text-slate-700 transition-all"><i class="fa-solid fa-clock-rotate-left mr-2"></i> Logs</button>
                         </div>
                         <button onclick="toggleTheme()" class="w-10 h-10 rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-yellow-400 hover:bg-slate-200 transition-colors flex items-center justify-center"><i id="themeIcon" class="fa-solid fa-moon"></i></button>
-                        <button onclick="handleLogout()" class="w-10 h-10 rounded-xl bg-red-50 text-red-500 hover:bg-red-100 transition-colors flex items-center justify-center" title="Logout"><i class="fa-solid fa-right-from-bracket"></i></button>
+                        <button onclick="doLogout()" class="w-10 h-10 rounded-xl bg-red-50 text-red-500 hover:bg-red-100 transition-colors flex items-center justify-center" title="Logout"><i class="fa-solid fa-right-from-bracket"></i></button>
                     </div>
                 </div>
             </div>
         </nav>
 
         <main class="max-w-[98%] mx-auto px-4 py-6 space-y-6">
+            
             <div id="view-dashboard" class="fade-in">
                 <div id="dropZone" class="bg-white dark:bg-dark-card rounded-3xl shadow-sm border-2 border-dashed border-slate-200 dark:border-dark-border p-6 hover:border-blue-400 dark:hover:border-blue-500 transition-all group mb-8">
                     <div class="flex flex-col md:flex-row justify-between items-end gap-4 mb-4">
@@ -204,15 +208,15 @@
                         </div>
                     </div>
                     <div class="h-[500px] w-full relative mb-8"><canvas id="salesChart"></canvas></div>
-                    <div id="graphStats" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 border-t border-slate-100 dark:border-slate-700 pt-8"></div>
+                    <div id="graphStats" class="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-4 gap-4 border-t border-slate-100 dark:border-slate-700 pt-8"></div>
                 </div>
             </div>
             
             <div id="view-changelog" class="hidden fade-in max-w-4xl mx-auto bg-white dark:bg-dark-card rounded-3xl shadow-sm p-8 dark:text-slate-300">
                 <h2 class="text-2xl font-bold mb-6">Version History</h2>
                 <ul class="space-y-4 border-l-2 border-slate-200 dark:border-slate-700 pl-4">
-                    <li><span class="text-xs font-bold bg-blue-100 text-blue-800 px-2 py-0.5 rounded">v8.0</span> <span class="font-bold ml-2">Analytics UI</span><p class="text-sm text-slate-500 dark:text-slate-400 mt-1">- Graph: เพิ่ม Mixed Chart (เส้น Total + แท่งแยกสี)<br>- Stats: การ์ดสรุปยอดรายวันแบบละเอียด<br>- UI: ปุ่ม Scroll กลับมาเป็นแบบ v3.9</p></li>
-                    <li><span class="text-xs font-bold bg-blue-100 text-blue-800 px-2 py-0.5 rounded">v7.0</span> Cloud Auth</li>
+                    <li><span class="text-xs font-bold bg-blue-100 text-blue-800 px-2 py-0.5 rounded">v8.1</span> <span class="font-bold ml-2">Passcode Login</span><p class="text-sm text-slate-500 dark:text-slate-400 mt-1">- Add: ระบบล็อคหน้าจอด้วยรหัส (Default: 9999)<br>- Fix: ฟังก์ชันครบ ปุ่มกดติดทุกปุ่ม</p></li>
+                    <li><span class="text-xs font-bold bg-blue-100 text-blue-800 px-2 py-0.5 rounded">v6.7</span> Complete Functional Fix</li>
                 </ul>
             </div>
         </main>
@@ -242,21 +246,12 @@
 
     <div id="printArea" style="display:none;"></div>
     <div id="copyContainer" style="position: fixed; left: -9999px;"></div>
-    
-    <div class="fixed bottom-8 right-8 flex flex-col gap-2 z-[70]">
-        <button onclick="scrollToTop()" id="goTopBtn" class="w-12 h-12 bg-slate-700 text-white rounded-full shadow-xl flex items-center justify-center hover:bg-slate-900 transition-all transform translate-y-20 opacity-0"><i class="fa-solid fa-arrow-up"></i></button>
-        <button onclick="scrollToBottom()" id="goBottomBtn" class="w-12 h-12 bg-slate-700 text-white rounded-full shadow-xl flex items-center justify-center hover:bg-slate-900 transition-all transform translate-y-20 opacity-0"><i class="fa-solid fa-arrow-down"></i></button>
-    </div>
-
+    <div class="fixed bottom-8 right-8 flex flex-col gap-2 z-[70]"><button onclick="scrollToTop()" id="goTopBtn" class="w-12 h-12 bg-slate-700 text-white rounded-full shadow-xl flex items-center justify-center hover:bg-slate-900 transition-all transform translate-y-20 opacity-0"><i class="fa-solid fa-arrow-up"></i></button><button onclick="scrollToBottom()" id="goBottomBtn" class="w-12 h-12 bg-slate-700 text-white rounded-full shadow-xl flex items-center justify-center hover:bg-slate-900 transition-all transform translate-y-20 opacity-0"><i class="fa-solid fa-arrow-down"></i></button></div>
     <div id="toast" class="fixed bottom-8 left-1/2 -translate-x-1/2 bg-slate-800/90 dark:bg-slate-100/90 backdrop-blur text-white dark:text-slate-900 px-6 py-3 rounded-full shadow-2xl flex items-center gap-3 transform translate-y-20 opacity-0 transition-all duration-300 z-[80]"><i class="fa-solid fa-circle-check text-green-400 dark:text-green-600"></i><span class="font-bold text-sm" id="toastMsg">...</span></div>
 
     <script>
-        // --- 1. CONFIGURATION ---
-        const SUPABASE_URL = 'https://gaouztqokymddminvoll.supabase.co'; 
-        const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imdhb3V6dHFva3ltZGRtaW52b2xsIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjkwNzYyMTIsImV4cCI6MjA4NDY1MjIxMn0.MMufB22XFGdcMbz_Q9Y7t6ZFnOP8ol9IbQa52NVpRb0';
-        const supabase = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
-
-        // --- 2. VARIABLES ---
+        // --- 1. CONFIG & VARIABLES ---
+        const ACCESS_PIN = '9999'; // รหัสผ่าน (แก้ไขได้ที่นี่)
         let globalData = [];
         let filteredViewData = [];
         let currentSort = { key: null, direction: 'asc' };
@@ -267,18 +262,22 @@
         let searchTerm = "";
         const staffToRemove = ["T. Trayaporn", "STAFF รัตนา ศิริโชคชัยมงคล", "Thipnaree J", "สุพิชญา โกศลกิตติพงศ์"];
 
-        // --- 3. INIT ---
-        document.addEventListener('DOMContentLoaded', async () => {
+        // --- 2. INIT & AUTH ---
+        document.addEventListener('DOMContentLoaded', () => {
             if (localStorage.getItem('theme') === 'dark' || (!('theme' in localStorage) && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
                 document.documentElement.classList.add('dark');
                 document.getElementById('themeIcon').classList.replace('fa-moon', 'fa-sun');
             }
+            
+            // Check Login
+            if (sessionStorage.getItem('tmtp_auth') === 'true') {
+                showApp();
+            }
+
             setupDragDrop();
             document.getElementById('emailDateSelect').addEventListener('change', (e) => updateEmailDraft(e.target.value));
-
-            const { data: { session } } = await supabase.auth.getSession();
-            if (session) showApp();
-
+            
+            // Restore Data
             const savedData = localStorage.getItem('tmtp_data');
             if(savedData) {
                 try {
@@ -291,28 +290,34 @@
             }
         });
 
-        // --- AUTH ---
-        async function handleMagicLogin() {
-            const email = document.getElementById('userEmail').value;
-            const status = document.getElementById('loginStatus');
-            const btn = document.getElementById('btnLogin');
-            if(!email) { status.innerText = "กรุณาระบุอีเมล"; return; }
-            btn.disabled = true; btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> กำลังส่ง...';
-            const { error } = await supabase.auth.signInWithOtp({ email: email, options: { emailRedirectTo: window.location.href } });
-            if (error) {
-                status.innerText = "เกิดข้อผิดพลาด: " + error.message; status.classList.replace('text-blue-500', 'text-red-500');
-                btn.disabled = false; btn.innerHTML = '<i class="fa-solid fa-wand-magic-sparkles"></i> ส่ง Magic Link';
+        function checkPasscode() {
+            const input = document.getElementById('passcodeInput');
+            const err = document.getElementById('loginError');
+            if(input.value === ACCESS_PIN) {
+                sessionStorage.setItem('tmtp_auth', 'true');
+                showApp();
             } else {
-                status.innerText = "ส่งลิงก์แล้ว! กรุณาเช็คอีเมล"; status.classList.replace('text-red-500', 'text-green-500');
-                btn.innerHTML = '<i class="fa-solid fa-check"></i> ส่งสำเร็จ';
+                err.innerText = "รหัสผ่านไม่ถูกต้อง";
+                input.value = '';
+                input.focus();
             }
         }
-        async function handleLogout() { await supabase.auth.signOut(); window.location.reload(); }
-        function showApp() { document.getElementById('loginScreen').classList.add('hidden'); document.getElementById('appContainer').classList.remove('hidden'); }
 
-        // --- HELPERS ---
+        function doLogout() {
+            sessionStorage.removeItem('tmtp_auth');
+            window.location.reload();
+        }
+
+        function showApp() {
+            document.getElementById('loginScreen').classList.add('hidden');
+            document.getElementById('appContainer').classList.remove('hidden');
+            setTimeout(() => { renderChart(); renderGraphStats(); }, 500); // Re-render graphs
+        }
+
+        // --- 3. HELPERS ---
         function toggleTheme() {
-            const html = document.documentElement; html.classList.toggle('dark');
+            const html = document.documentElement;
+            html.classList.toggle('dark');
             const isDark = html.classList.contains('dark');
             localStorage.setItem('theme', isDark ? 'dark' : 'light');
             document.getElementById('themeIcon').className = isDark ? 'fa-solid fa-sun' : 'fa-solid fa-moon';
@@ -330,13 +335,17 @@
         window.onscroll = function() { const btnTop = document.getElementById("goTopBtn"); const btnBot = document.getElementById("goBottomBtn"); if (window.scrollY > 300) { btnTop.classList.remove('opacity-0', 'translate-y-20'); btnBot.classList.remove('opacity-0', 'translate-y-20'); } else { btnTop.classList.add('opacity-0', 'translate-y-20'); btnBot.classList.add('opacity-0', 'translate-y-20'); } };
 
         function setupDragDrop() {
-            const dropZone = document.getElementById('dropZone'); const fileInput = document.getElementById('fileInput');
+            const dropZone = document.getElementById('dropZone');
+            const fileInput = document.getElementById('fileInput');
             dropZone.addEventListener('dragover', (e) => { e.preventDefault(); dropZone.classList.add('border-blue-500', 'bg-blue-50', 'dark:bg-blue-900/20'); });
             dropZone.addEventListener('dragleave', (e) => { e.preventDefault(); dropZone.classList.remove('border-blue-500', 'bg-blue-50', 'dark:bg-blue-900/20'); });
-            dropZone.addEventListener('drop', (e) => { e.preventDefault(); dropZone.classList.remove('border-blue-500', 'bg-blue-50', 'dark:bg-blue-900/20'); if (e.dataTransfer.files.length) { fileInput.files = e.dataTransfer.files; const event = new Event('change'); fileInput.dispatchEvent(event); } });
+            dropZone.addEventListener('drop', (e) => {
+                e.preventDefault(); dropZone.classList.remove('border-blue-500', 'bg-blue-50', 'dark:bg-blue-900/20');
+                if (e.dataTransfer.files.length) { fileInput.files = e.dataTransfer.files; const event = new Event('change'); fileInput.dispatchEvent(event); }
+            });
         }
 
-        // --- PROCESSING ---
+        // --- 4. PROCESSING ---
         function processData() {
             showLoading();
             setTimeout(() => {
@@ -388,47 +397,7 @@
             }, 500); 
         }
 
-        // --- CORE FUNCTIONS ---
-        function updateAllTotals(data) {
-            let gt=0, gc=0, gm=0, gmc=0, gp=0, gpc=0;
-            const source = data || globalData;
-            source.forEach(i => {
-                gt += i.total; gc++;
-                if(i.type === 'telemed') { gm += i.total; gmc++; } else { gp += i.total; gpc++; }
-            });
-            document.getElementById('globalTotal').innerText = formatMoney(gt);
-            document.getElementById('globalCount').innerText = gc;
-            document.getElementById('globalTelemed').innerText = formatMoney(gm);
-            document.getElementById('globalTelemedCount').innerText = gmc + " Bills";
-            document.getElementById('globalPharm').innerText = formatMoney(gp);
-            document.getElementById('globalPharmCount').innerText = gpc + " Bills";
-        }
-
-        function clearData() {
-            document.getElementById('rawData').value = '';
-            document.getElementById('searchInput').value = '';
-            searchTerm = ''; globalData = []; filteredViewData = [];
-            renderUI(); saveToLocal(); showToast("ล้างข้อมูลเรียบร้อย");
-        }
-
-        function switchTab(tName) {
-            const tabs = ['dashboard', 'graphs', 'changelog'];
-            tabs.forEach(t => {
-                const btn = document.getElementById(`tab-${t}`);
-                const view = document.getElementById(`view-${t}`);
-                if (t === tName) {
-                    view.classList.remove('hidden');
-                    btn.classList.add('bg-white', 'dark:bg-slate-700', 'text-blue-600', 'dark:text-blue-400', 'shadow-sm');
-                    btn.classList.remove('text-slate-500', 'dark:text-slate-400');
-                } else {
-                    view.classList.add('hidden');
-                    btn.classList.remove('bg-white', 'dark:bg-slate-700', 'text-blue-600', 'dark:text-blue-400', 'shadow-sm');
-                    btn.classList.add('text-slate-500', 'dark:text-slate-400');
-                }
-            });
-            if (tName === 'graphs') { setTimeout(() => { renderChart(); renderGraphStats(); }, 150); }
-        }
-
+        // --- 5. RENDER UI & TABLE ---
         function renderUI() {
             const container = document.getElementById('dailyContainer');
             const navContainer = document.getElementById('navigatorBar');
@@ -504,17 +473,104 @@
             container.innerHTML = html;
         }
 
-        // --- GRAPH LOGIC ---
+        function renderCategoryTable(items, type, idx, dateStr) {
+            const tableId = `table-${type}-${idx}`;
+            let themeClass = 'border-slate-200 dark:border-slate-700';
+            let headerClass = 'bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300';
+            let title = 'MERGED LIST';
+            let icon = 'fa-layer-group';
+            if (type === 'telemed') { themeClass = 'border-blue-200 dark:border-blue-900'; headerClass = 'bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-300'; title = 'MED'; icon = 'fa-user-doctor'; }
+            else if (type === 'telepharmacy') { themeClass = 'border-green-200 dark:border-green-900'; headerClass = 'bg-green-50 dark:bg-green-900/20 text-green-700 dark:text-green-300'; title = 'PHARMACY'; icon = 'fa-pills'; }
+
+            const total = items.reduce((sum, i) => sum + i.total, 0);
+
+            return `
+                <div class="bg-white dark:bg-dark-card rounded-2xl shadow-sm border ${themeClass} overflow-hidden">
+                    <div class="${headerClass} px-4 py-3 flex flex-wrap justify-between items-center gap-2">
+                        <div class="font-bold flex items-center gap-2"><i class="fa-solid ${icon}"></i> ${title} <span class="opacity-70 text-xs font-normal">(${items.length} items)</span></div>
+                        <div class="flex items-center gap-2">
+                            <button onclick="exportDaily('${type}', '${dateStr}', 'pdf')" class="btn-xs bg-white/50 hover:bg-white dark:bg-black/20 dark:hover:bg-black/40"><i class="fa-solid fa-file-pdf"></i></button>
+                            <button onclick="exportDaily('${type}', '${dateStr}', 'excel')" class="btn-xs bg-white/50 hover:bg-white dark:bg-black/20 dark:hover:bg-black/40"><i class="fa-solid fa-file-excel"></i></button>
+                            <div class="h-4 w-px bg-current opacity-20 mx-1"></div>
+                            <button onclick="bulkAction('${type}', 'highlight')" class="btn-xs" title="Highlight"><i class="fa-solid fa-highlighter"></i></button>
+                            <button onclick="bulkAction('${type}', 'swap')" class="btn-xs" title="Swap"><i class="fa-solid fa-repeat"></i></button>
+                            <button onclick="bulkAction('${type}', 'delete')" class="btn-xs hover:text-red-500" title="Delete"><i class="fa-solid fa-trash"></i></button>
+                            <div class="h-4 w-px bg-current opacity-20 mx-1"></div>
+                            <span class="font-mono font-bold text-sm">฿${formatMoney(total)}</span>
+                            <button onclick="copyTable('${tableId}')" class="btn-xs bg-white dark:bg-slate-700 border shadow-sm ml-2">Copy</button>
+                        </div>
+                    </div>
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-sm text-left border-collapse dark:text-slate-300" id="${tableId}">
+                            <thead><tr class="bg-slate-50 dark:bg-slate-800 text-slate-500 dark:text-slate-400 text-xs uppercase tracking-wider border-b border-slate-200 dark:border-slate-700">
+                                <th class="p-2 w-8 text-center"><input type="checkbox" class="custom-checkbox" onchange="toggleSelectAll('${tableId}', this.checked)"></th>
+                                <th class="p-2 w-8 text-center">#</th><th class="p-2 hidden">Date</th>
+                                <th class="p-2 w-36 text-center cursor-pointer hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors" onclick="handleSort('orderId')">Order ID</th>
+                                <th class="p-2 w-16 text-center">Qty</th><th class="p-2 w-20 text-center text-slate-400">Base</th><th class="p-2 w-16 text-center text-slate-400">VAT</th>
+                                <th class="p-2 w-24 text-center font-bold">Total</th><th class="p-2 w-32 text-center">Track</th>
+                                <th class="p-2 w-44 text-center cursor-pointer hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors" onclick="handleSort('invoiceId')">INV</th>
+                                <th class="p-2 w-20 text-center">Time</th><th class="p-2 min-w-[200px] text-center">Note</th>
+                            </tr></thead>
+                            <tbody class="divide-y divide-slate-100 dark:divide-slate-700">
+                                ${items.map((item, i) => `
+                                    <tr class="group hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors ${item.isHighlighted ? 'row-highlight' : ''}">
+                                        <td class="p-2 text-center"><input type="checkbox" class="custom-checkbox" data-id="${item.id}" ${item.isSelected ? 'checked' : ''} onchange="toggleSelect('${item.id}')"></td>
+                                        <td class="p-2 text-center text-slate-400 font-mono text-xs">${i + 1}</td>
+                                        <td class="hidden"><input type="text" class="table-input" value="${item.date}"></td>
+                                        <td class="p-1"><input type="text" class="table-input font-mono text-center text-xs font-medium ${item.type === 'telemed' ? 'text-blue-600' : 'text-green-600'}" value="${escapeAttribute(item.orderId)}"></td>
+                                        <td class="p-1"><input type="number" class="table-input text-center font-bold text-slate-600 dark:text-slate-400" value="${item.qty}"></td>
+                                        <td class="p-1"><input type="text" class="table-input text-right text-slate-400 text-xs base-price" value="${formatMoney(item.base)}" readonly></td>
+                                        <td class="p-1"><input type="text" class="table-input text-right text-slate-400 text-xs vat" value="${formatMoney(item.vat)}" readonly></td>
+                                        <td class="p-1"><input type="text" class="table-input text-right font-bold total-amount" value="${formatMoney(item.total)}" oninput="updateItemValue('${item.id}', this)" onblur="formatInput(this)"></td>
+                                        <td class="p-1"><input type="text" class="table-input text-xs text-center" value="${escapeAttribute(item.tracking)}"></td>
+                                        <td class="p-1"><input type="text" class="table-input font-mono text-xs text-center" value="${escapeAttribute(item.invoiceId)}"></td>
+                                        <td class="p-1"><input type="text" class="table-input text-xs text-center" value="${escapeAttribute(item.time)}"></td>
+                                        <td class="p-1"><input type="text" class="table-input text-xs text-left" value="${escapeAttribute(item.note)}"></td>
+                                    </tr>
+                                `).join('')}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            `;
+        }
+
+        // --- 6. GRAPHS & STATS (ADDED BACK) ---
         function renderGraphStats() {
             const container = document.getElementById('graphStats');
             if(!container) return;
             container.innerHTML = '';
+            
             const sortedDates = [...new Set(filteredViewData.map(i => i.date))].sort((a,b) => parseDateForSort(a) - parseDateForSort(b));
+
             sortedDates.forEach(date => {
                 const items = filteredViewData.filter(i => i.date === date);
                 const medItems = items.filter(i => i.type === 'telemed');
                 const pharmItems = items.filter(i => i.type === 'telepharmacy');
-                const card = `<div class="bg-slate-50 dark:bg-slate-800 rounded-xl p-4 border border-slate-200 dark:border-slate-700 shadow-sm hover:shadow-md transition-all"><div class="flex items-center gap-2 mb-3 border-b border-slate-200 dark:border-slate-700 pb-2"><div class="bg-indigo-100 dark:bg-indigo-900/50 text-indigo-600 dark:text-indigo-300 w-8 h-8 rounded-lg flex items-center justify-center font-bold text-sm">${date.split('/')[0]}</div><span class="font-bold text-slate-700 dark:text-slate-200">${date}</span></div><div class="space-y-3"><div class="flex justify-between items-center text-sm"><span class="text-blue-600 dark:text-blue-400 font-semibold flex items-center gap-2"><div class="w-2 h-2 rounded-full bg-blue-500"></div> MED</span><div class="text-right"><span class="bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 px-1.5 py-0.5 rounded text-xs mr-2 font-bold">${medItems.length} บิล</span><span class="font-bold text-slate-700 dark:text-slate-300">${formatMoney(medItems.reduce((a,b)=>a+b.total,0))}</span></div></div><div class="flex justify-between items-center text-sm"><span class="text-green-600 dark:text-green-400 font-semibold flex items-center gap-2"><div class="w-2 h-2 rounded-full bg-green-500"></div> PHARM</span><div class="text-right"><span class="bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300 px-1.5 py-0.5 rounded text-xs mr-2 font-bold">${pharmItems.length} บิล</span><span class="font-bold text-slate-700 dark:text-slate-300">${formatMoney(pharmItems.reduce((a,b)=>a+b.total,0))}</span></div></div></div></div>`;
+                
+                const card = `
+                    <div class="bg-slate-50 dark:bg-slate-800 rounded-xl p-4 border border-slate-200 dark:border-slate-700 shadow-sm hover:shadow-md transition-all">
+                        <div class="flex items-center gap-2 mb-3 border-b border-slate-200 dark:border-slate-700 pb-2">
+                            <div class="bg-indigo-100 dark:bg-indigo-900/50 text-indigo-600 dark:text-indigo-300 w-8 h-8 rounded-lg flex items-center justify-center font-bold text-sm">${date.split('/')[0]}</div>
+                            <span class="font-bold text-slate-700 dark:text-slate-200">${date}</span>
+                        </div>
+                        <div class="space-y-3">
+                            <div class="flex justify-between items-center text-sm">
+                                <span class="text-blue-600 dark:text-blue-400 font-semibold flex items-center gap-2"><div class="w-2 h-2 rounded-full bg-blue-500"></div> MED</span>
+                                <div class="text-right">
+                                    <span class="bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 px-1.5 py-0.5 rounded text-xs mr-2 font-bold">${medItems.length} บิล</span>
+                                    <span class="font-bold text-slate-700 dark:text-slate-300">${formatMoney(medItems.reduce((a,b)=>a+b.total,0))}</span>
+                                </div>
+                            </div>
+                            <div class="flex justify-between items-center text-sm">
+                                <span class="text-green-600 dark:text-green-400 font-semibold flex items-center gap-2"><div class="w-2 h-2 rounded-full bg-green-500"></div> PHARM</span>
+                                <div class="text-right">
+                                    <span class="bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300 px-1.5 py-0.5 rounded text-xs mr-2 font-bold">${pharmItems.length} บิล</span>
+                                    <span class="font-bold text-slate-700 dark:text-slate-300">${formatMoney(pharmItems.reduce((a,b)=>a+b.total,0))}</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>`;
                 container.insertAdjacentHTML('beforeend', card);
             });
         }
@@ -524,20 +580,41 @@
             if(!ctx) return;
             const sortedData = [...filteredViewData].sort((a,b) => (a.rawDate - b.rawDate) || a.orderId.localeCompare(b.orderId));
             if(sortedData.length === 0) return;
+
             let labels = [], datasets = [];
+
             if (chartMode === 'daily') {
                 const dailyData = {};
-                sortedData.forEach(i => { if (!dailyData[i.date]) dailyData[i.date] = { med: 0, pharm: 0, total: 0 }; if (i.type === 'telemed') dailyData[i.date].med += i.total; else dailyData[i.date].pharm += i.total; dailyData[i.date].total += i.total; });
+                sortedData.forEach(i => {
+                    if (!dailyData[i.date]) dailyData[i.date] = { med: 0, pharm: 0, total: 0 };
+                    if (i.type === 'telemed') dailyData[i.date].med += i.total;
+                    else dailyData[i.date].pharm += i.total;
+                    dailyData[i.date].total += i.total;
+                });
                 labels = Object.keys(dailyData).sort((a,b) => parseDateForSort(a) - parseDateForSort(b));
-                datasets = [{ type: 'line', label: 'Total', data: labels.map(d => dailyData[d].total), borderColor: '#f97316', backgroundColor: '#f97316', borderWidth: 2, tension: 0.3, order: 0 }, { type: 'bar', label: 'MED', data: labels.map(d => dailyData[d].med), backgroundColor: '#3b82f6', order: 1 }, { type: 'bar', label: 'PHARMACY', data: labels.map(d => dailyData[d].pharm), backgroundColor: '#10b981', order: 2 }];
+                datasets = [
+                    { type: 'line', label: 'Total', data: labels.map(d => dailyData[d].total), borderColor: '#f97316', backgroundColor: '#f97316', borderWidth: 2, tension: 0.3, order: 0 },
+                    { type: 'bar', label: 'MED', data: labels.map(d => dailyData[d].med), backgroundColor: '#3b82f6', order: 1 },
+                    { type: 'bar', label: 'PHARMACY', data: labels.map(d => dailyData[d].pharm), backgroundColor: '#10b981', order: 2 }
+                ];
             } else {
                 labels = sortedData.map(i => i.invoiceId || i.orderId);
                 const dataPoints = sortedData.map(i => i.total);
                 const bgColors = sortedData.map(i => i.type === 'telemed' ? '#3b82f6' : '#10b981');
                 datasets = [{ type: 'bar', label: 'Sales', data: dataPoints, backgroundColor: bgColors, borderWidth: 0, borderRadius: 4 }];
             }
+
             if(chartInstance) chartInstance.destroy();
-            chartInstance = new Chart(ctx, { data: { labels: labels, datasets: datasets }, options: { responsive: true, maintainAspectRatio: false, interaction: { mode: 'index', intersect: false }, plugins: { legend: { display: chartMode === 'daily', position: 'top' } }, scales: { x: { stacked: chartMode === 'daily', ticks: { maxRotation: 90 } }, y: { stacked: chartMode === 'daily', beginAtZero: true } } } });
+            chartInstance = new Chart(ctx, {
+                data: { labels: labels, datasets: datasets },
+                options: { 
+                    responsive: true, 
+                    maintainAspectRatio: false, 
+                    interaction: { mode: 'index', intersect: false },
+                    plugins: { legend: { display: chartMode === 'daily', position: 'top' } },
+                    scales: { x: { stacked: chartMode === 'daily', ticks: { maxRotation: 90 } }, y: { stacked: chartMode === 'daily', beginAtZero: true } } 
+                }
+            });
         }
         
         function setChartMode(mode) {
@@ -554,34 +631,94 @@
             renderChart();
         }
 
-        // --- UTILS ---
-        function updateItemValue(id, input) { const item = globalData.find(i => i.id === id); if (!item) return; const val = parseFloat(input.value.replace(/,/g, '')) || 0; item.total = val; item.base = val / 1.07; item.vat = val - item.base; const tr = input.closest('tr'); tr.querySelector('.base-price').value = formatMoney(item.base); tr.querySelector('.vat').value = formatMoney(item.vat); updateAllTotals(filteredViewData); saveToLocal(); }
-        function renderCategoryTable(items, type, idx, dateStr) {
-            const tableId = `table-${type}-${idx}`;
-            let themeClass = 'border-slate-200 dark:border-slate-700', headerClass = 'bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300', title = 'MERGED LIST', icon = 'fa-layer-group';
-            if (type === 'telemed') { themeClass = 'border-blue-200 dark:border-blue-900'; headerClass = 'bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-300'; title = 'MED'; icon = 'fa-user-doctor'; }
-            else if (type === 'telepharmacy') { themeClass = 'border-green-200 dark:border-green-900'; headerClass = 'bg-green-50 dark:bg-green-900/20 text-green-700 dark:text-green-300'; title = 'PHARMACY'; icon = 'fa-pills'; }
-            const total = items.reduce((sum, i) => sum + i.total, 0);
-            return `<div class="bg-white dark:bg-dark-card rounded-2xl shadow-sm border ${themeClass} overflow-hidden"><div class="${headerClass} px-4 py-3 flex flex-wrap justify-between items-center gap-2"><div class="font-bold flex items-center gap-2"><i class="fa-solid ${icon}"></i> ${title} <span class="opacity-70 text-xs font-normal">(${items.length} items)</span></div><div class="flex items-center gap-2"><button onclick="exportDaily('${type}', '${dateStr}', 'pdf')" class="btn-xs bg-white/50 hover:bg-white dark:bg-black/20 dark:hover:bg-black/40"><i class="fa-solid fa-file-pdf"></i></button><button onclick="exportDaily('${type}', '${dateStr}', 'excel')" class="btn-xs bg-white/50 hover:bg-white dark:bg-black/20 dark:hover:bg-black/40"><i class="fa-solid fa-file-excel"></i></button><div class="h-4 w-px bg-current opacity-20 mx-1"></div><button onclick="bulkAction('${type}', 'highlight')" class="btn-xs" title="Highlight"><i class="fa-solid fa-highlighter"></i></button><button onclick="bulkAction('${type}', 'swap')" class="btn-xs" title="Swap"><i class="fa-solid fa-repeat"></i></button><button onclick="bulkAction('${type}', 'delete')" class="btn-xs hover:text-red-500" title="Delete"><i class="fa-solid fa-trash"></i></button><div class="h-4 w-px bg-current opacity-20 mx-1"></div><span class="font-mono font-bold text-sm">฿${formatMoney(total)}</span><button onclick="copyTable('${tableId}')" class="btn-xs bg-white dark:bg-slate-700 border shadow-sm ml-2">Copy</button></div></div><div class="overflow-x-auto"><table class="w-full text-sm text-left border-collapse dark:text-slate-300" id="${tableId}"><thead><tr class="bg-slate-50 dark:bg-slate-800 text-slate-500 dark:text-slate-400 text-xs uppercase tracking-wider border-b border-slate-200 dark:border-slate-700"><th class="p-2 w-8 text-center"><input type="checkbox" class="custom-checkbox" onchange="toggleSelectAll('${tableId}', this.checked)"></th><th class="p-2 w-8 text-center">#</th><th class="p-2 hidden">Date</th><th class="p-2 w-36 text-center cursor-pointer hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors" onclick="handleSort('orderId')">Order ID</th><th class="p-2 w-16 text-center">Qty</th><th class="p-2 w-20 text-center text-slate-400">Base</th><th class="p-2 w-16 text-center text-slate-400">VAT</th><th class="p-2 w-24 text-center font-bold">Total</th><th class="p-2 w-32 text-center">Track</th><th class="p-2 w-44 text-center cursor-pointer hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors" onclick="handleSort('invoiceId')">INV</th><th class="p-2 w-20 text-center">Time</th><th class="p-2 min-w-[200px] text-center">Note</th></tr></thead><tbody class="divide-y divide-slate-100 dark:divide-slate-700">${items.map((item, i) => `<tr class="group hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors ${item.isHighlighted ? 'row-highlight' : ''}"><td class="p-2 text-center"><input type="checkbox" class="custom-checkbox" data-id="${item.id}" ${item.isSelected ? 'checked' : ''} onchange="toggleSelect('${item.id}')"></td><td class="p-2 text-center text-slate-400 font-mono text-xs">${i + 1}</td><td class="hidden"><input type="text" class="table-input" value="${item.date}"></td><td class="p-1"><input type="text" class="table-input font-mono text-center text-xs font-medium ${item.type === 'telemed' ? 'text-blue-600' : 'text-green-600'}" value="${escapeAttribute(item.orderId)}"></td><td class="p-1"><input type="number" class="table-input text-center font-bold text-slate-600 dark:text-slate-400" value="${item.qty}"></td><td class="p-1"><input type="text" class="table-input text-right text-slate-400 text-xs base-price" value="${formatMoney(item.base)}" readonly></td><td class="p-1"><input type="text" class="table-input text-right text-slate-400 text-xs vat" value="${formatMoney(item.vat)}" readonly></td><td class="p-1"><input type="text" class="table-input text-right font-bold total-amount" value="${formatMoney(item.total)}" oninput="updateItemValue('${item.id}', this)" onblur="formatInput(this)"></td><td class="p-1"><input type="text" class="table-input text-xs text-center" value="${escapeAttribute(item.tracking)}"></td><td class="p-1"><input type="text" class="table-input font-mono text-xs text-center" value="${escapeAttribute(item.invoiceId)}"></td><td class="p-1"><input type="text" class="table-input text-xs text-center" value="${escapeAttribute(item.time)}"></td><td class="p-1"><input type="text" class="table-input text-xs text-left" value="${escapeAttribute(item.note)}"></td></tr>`).join('')}</tbody></table></div></div>`;
+        // --- 7. CORE FUNCTIONS ---
+        function updateAllTotals(data) {
+            let gt=0, gc=0, gm=0, gmc=0, gp=0, gpc=0;
+            const source = data || globalData;
+            source.forEach(i => {
+                gt += i.total; gc++;
+                if(i.type === 'telemed') { gm += i.total; gmc++; } else { gp += i.total; gpc++; }
+            });
+            document.getElementById('globalTotal').innerText = formatMoney(gt);
+            document.getElementById('globalCount').innerText = gc;
+            document.getElementById('globalTelemed').innerText = formatMoney(gm);
+            document.getElementById('globalTelemedCount').innerText = gmc + " Bills";
+            document.getElementById('globalPharm').innerText = formatMoney(gp);
+            document.getElementById('globalPharmCount').innerText = gpc + " Bills";
+        }
+
+        function updateItemValue(id, input) {
+            const item = globalData.find(i => i.id === id);
+            if (!item) return;
+            const val = parseFloat(input.value.replace(/,/g, '')) || 0;
+            item.total = val; item.base = val / 1.07; item.vat = val - item.base;
+            const tr = input.closest('tr');
+            tr.querySelector('.base-price').value = formatMoney(item.base);
+            tr.querySelector('.vat').value = formatMoney(item.vat);
+            updateAllTotals(filteredViewData);
+            saveToLocal();
+        }
+
+        function clearData() {
+            document.getElementById('rawData').value = '';
+            document.getElementById('searchInput').value = '';
+            searchTerm = ''; globalData = []; filteredViewData = [];
+            renderUI(); saveToLocal(); showToast("ล้างข้อมูลเรียบร้อย");
+        }
+
+        function handleSort(key) {
+            if (currentSort.key === key) {
+                currentSort.direction = currentSort.direction === 'asc' ? 'desc' : 'asc';
+            } else {
+                currentSort.key = key;
+                currentSort.direction = 'asc';
+            }
+            renderUI();
+        }
+
+        function switchTab(tName) {
+            const tabs = ['dashboard', 'graphs', 'changelog'];
+            tabs.forEach(t => {
+                const btn = document.getElementById(`tab-${t}`);
+                const view = document.getElementById(`view-${t}`);
+                if (t === tName) {
+                    view.classList.remove('hidden');
+                    btn.classList.add('bg-white', 'dark:bg-slate-700', 'text-blue-600', 'dark:text-blue-400', 'shadow-sm');
+                    btn.classList.remove('text-slate-500', 'dark:text-slate-400');
+                } else {
+                    view.classList.add('hidden');
+                    btn.classList.remove('bg-white', 'dark:bg-slate-700', 'text-blue-600', 'dark:text-blue-400', 'shadow-sm');
+                    btn.classList.add('text-slate-500', 'dark:text-slate-400');
+                }
+            });
+            if (tName === 'graphs') { 
+                setTimeout(() => { renderChart(); renderGraphStats(); }, 150);
+            }
         }
 
         // --- EMAIL & EXPORT ---
         function openEmailModal() {
             if(globalData.length === 0) return showToast("ไม่มีข้อมูล", true);
             const dates = [...new Set(globalData.map(i => i.date))].sort((a,b) => parseDateForSort(b) - parseDateForSort(a)); 
-            const select = document.getElementById('emailDateSelect'); select.innerHTML = '<option value="">-- เลือกวันที่ --</option>';
+            const select = document.getElementById('emailDateSelect');
+            select.innerHTML = '<option value="">-- เลือกวันที่ --</option>';
             dates.forEach(d => { select.innerHTML += `<option value="${d}">${d}</option>`; });
             if(dates.length > 0) { select.value = dates[0]; updateEmailDraft(dates[0]); }
             document.getElementById('emailModal').classList.remove('hidden');
         }
+
         function updateEmailDraft(dateStr) {
             try {
                 let items = globalData.filter(i => i.date === dateStr).sort((a,b) => a.orderId.localeCompare(b.orderId));
-                document.getElementById('emailPreviewMed').innerHTML = generateEmailHtml(items.filter(i => i.type === 'telemed'), 'TELEMEDICINE', dateStr);
-                document.getElementById('emailPreviewPharm').innerHTML = generateEmailHtml(items.filter(i => i.type === 'telepharmacy'), 'PHARMACY', dateStr);
+                const medItems = items.filter(i => i.type === 'telemed');
+                const pharmItems = items.filter(i => i.type === 'telepharmacy');
+                document.getElementById('emailPreviewMed').innerHTML = generateEmailHtml(medItems, 'TELEMEDICINE', dateStr);
+                document.getElementById('emailPreviewPharm').innerHTML = generateEmailHtml(pharmItems, 'PHARMACY', dateStr);
             } catch(e) { console.error(e); }
         }
+
         function closeEmailModal() { document.getElementById('emailModal').classList.add('hidden'); }
+
         function generateEmailHtml(items, title, dateStr) {
             const safeDate = dateStr || "ไม่ระบุวันที่";
             const thStyle = 'background-color: #4CAF50; color: white; border: 1px solid #999; padding: 4px; font-size: 11px; text-align: center; white-space: nowrap;';
@@ -589,16 +726,21 @@
             let rows = items.length > 0 ? items.map((item, idx) => `<tr><td style="${tdStyle} text-align:center;">${idx+1}</td><td style="${tdStyle} text-align:center;">${item.date}</td><td style="${tdStyle} text-align:center;">${item.orderId}</td><td style="${tdStyle} text-align:center;">${item.qty}</td><td style="${tdStyle} text-align:right;">${formatMoney(item.base)}</td><td style="${tdStyle} text-align:right;">${formatMoney(item.vat)}</td><td style="${tdStyle} text-align:right; font-weight:bold;">${formatMoney(item.total)}</td><td style="${tdStyle} text-align:center;">${escapeHtml(item.tracking)}</td><td style="${tdStyle} text-align:center;">${item.invoiceId}</td><td style="${tdStyle} text-align:center;">${item.time}</td><td style="${tdStyle} text-align:left;">${escapeHtml(item.note)}</td></tr>`).join('') : `<tr><td colspan="11" style="${tdStyle} text-align:center; color:#999;">- ไม่มีรายการ -</td></tr>`;
             return `<div class="email-content" style="font-family: 'Prompt', sans-serif; font-size: 12px; color: #000;"><p style="margin: 4px 0;">สรุปยอด ${safeDate} // --- ${title}</p><p style="margin: 4px 0;">BAR-00000--</p><p style="margin: 4px 0;">ค่ายา 💊 และค่าส่งสินค้า ยอดรวมชำระเข้า บัญชี บจก. เมดไลฟ์ พลัส</p><p style="margin: 4px 0;">(ธนาคารไทยพาณิชย์ เลขที่บัญชี 415-077389-0)</p><p style="margin: 4px 0;"><b>${formatMoney(items.reduce((s,i)=>s+i.total,0))} บาท</b></p><br><table style="width: 100%; border-collapse: collapse; font-size: 11px; color: #000;"><thead><tr><th style="${thStyle}">#</th><th style="${thStyle}">Date</th><th style="${thStyle}">Order ID</th><th style="${thStyle}">Qty</th><th style="${thStyle}">Base</th><th style="${thStyle}">VAT</th><th style="${thStyle}">Total</th><th style="${thStyle}">Tracking</th><th style="${thStyle}">INV</th><th style="${thStyle}">Time</th><th style="${thStyle}">Note</th></tr></thead><tbody>${rows}</tbody></table><br><p style="margin: 4px 0;">-----</p><div style="font-family: sans-serif; font-size: 12px;">MEDLIFE PLUS CO., LTD.<br>M: (+66)95-750-9723<br>E: medlifeplus@gmail.com<br>A: 198, Putthong apartment Floor 1 Room 102-103, Soi Yothin Pattana, Bang Kapi, Klong jan, Bangkok 10240, Thailand<br>LINE: @medlifeplus</div></div>`;
         }
-        async function copyEmailContent(side) {
+
+        function copyEmailContent(side) {
             const el = document.getElementById(side === 'med' ? 'emailPreviewMed' : 'emailPreviewPharm');
-            if (!el) return;
-            try {
-                await navigator.clipboard.write([new ClipboardItem({ "text/html": new Blob([el.innerHTML], { type: "text/html" }), "text/plain": new Blob([el.innerText], { type: "text/plain" }) })]);
-                showToast("คัดลอกเรียบร้อย (API)");
-            } catch (err) {
-                const range = document.createRange(); range.selectNodeContents(el); const sel = window.getSelection(); sel.removeAllRanges(); sel.addRange(range); document.execCommand('copy'); sel.removeAllRanges(); showToast("คัดลอกเรียบร้อย (Fallback)");
-            }
+            const range = document.createRange(); range.selectNode(el);
+            window.getSelection().removeAllRanges(); window.getSelection().addRange(range);
+            document.execCommand('copy'); showToast("คัดลอกอีเมลเรียบร้อย");
         }
+
+        function exportToExcel(filterType) { let items = globalData.filter(i => i.type === filterType); if(items.length === 0) return showToast("ไม่มีข้อมูล", true); generateExcelFile(items, `BillPro_${filterType.toUpperCase()}`); }
+        function exportDaily(type, dateStr, format) { let items = globalData.filter(i => (type === 'mixed' ? true : i.type === type) && i.date === dateStr); if(items.length === 0) return showToast("ไม่มีข้อมูล", true); items.sort((a,b) => a.orderId.localeCompare(b.orderId)); if(format === 'excel') generateExcelFile(items, `BillPro_${type.toUpperCase()}_${dateStr.replace(/\//g,'-')}`); else printReport(items, type, dateStr); }
+        function exportToPDF(filterType) { let items = globalData.filter(i => i.type === filterType); if(items.length === 0) return showToast("ไม่มีข้อมูล", true); items.sort((a,b) => a.rawDate - b.rawDate); printReport(items, filterType, "All Dates"); }
+        function generateExcelFile(items, filename) { let table = `<html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:x="urn:schemas-microsoft-com:office:excel" xmlns="http://www.w3.org/TR/REC-html40"><head><meta charset="UTF-8"></head><body><table border="1"><thead><tr><th>#</th><th>Date</th><th>Order ID</th><th>Qty</th><th>Base</th><th>VAT</th><th>Total</th><th>Tracking</th><th>INV</th><th>Time</th><th>Note</th></tr></thead><tbody>`; items.forEach((i, idx) => { table += `<tr><td>${idx+1}</td><td>${i.date}</td><td style='mso-number-format:"\\@"'>${i.orderId}</td><td>${i.qty}</td><td>${i.base.toFixed(2)}</td><td>${i.vat.toFixed(2)}</td><td>${i.total.toFixed(2)}</td><td>${i.tracking}</td><td style='mso-number-format:"\\@"'>${i.invoiceId}</td><td>${i.time}</td><td>${i.note}</td></tr>`; }); table += `</tbody></table></body></html>`; const blob = new Blob([table], { type: 'application/vnd.ms-excel' }); const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = `${filename}.xls`; document.body.appendChild(a); a.click(); document.body.removeChild(a); }
+        function printReport(items, type, dateStr) { let displayName = type === 'telemed' ? 'MED' : (type === 'mixed' ? 'MERGED' : 'PHARMACY'); let printHTML = `<div class="print-header">รายงานสรุป ${displayName} (${dateStr})</div><table><thead><tr><th>#</th><th>Date</th><th>Order ID</th><th>Qty</th><th align="right">Base</th><th align="right">VAT</th><th align="right">Total</th><th>Track</th><th>INV</th><th>Time</th><th>Note</th></tr></thead><tbody>`; let grandTotal = 0; items.forEach((item, idx) => { grandTotal += item.total; printHTML += `<tr><td align="center">${idx+1}</td><td>${item.date}</td><td>${item.orderId}</td><td align="center">${item.qty}</td><td align="right">${formatMoney(item.base)}</td><td align="right">${formatMoney(item.vat)}</td><td align="right"><b>${formatMoney(item.total)}</b></td><td>${item.tracking}</td><td>${item.invoiceId}</td><td>${item.time}</td><td align="left">${item.note}</td></tr>`; }); printHTML += `<tr class="total-row"><td colspan="6" align="right">รวมทั้งหมด:</td><td align="right">${formatMoney(grandTotal)}</td><td colspan="4"></td></tr></tbody></table>`; const printArea = document.getElementById('printArea'); printArea.innerHTML = printHTML; window.print(); }
+
+        // --- MISC UTILS ---
         function toggleSelect(id, state = null) { const item = globalData.find(x => x.id === id); if (item) item.isSelected = (state !== null) ? state : !item.isSelected; saveToLocal(); }
         function toggleSelectAll(tableId, checked) { document.querySelectorAll(`#${tableId} tbody input[type="checkbox"]`).forEach(cb => { cb.checked = checked; toggleSelect(cb.getAttribute('data-id'), checked); }); }
         function bulkAction(type, action) {
@@ -613,18 +755,12 @@
         function toggleDateSort() { dateSortOrder = dateSortOrder === 'desc' ? 'asc' : 'desc'; document.getElementById('btnSort').innerHTML = `SORT <i class="fa-solid fa-arrow-${dateSortOrder === 'asc' ? 'up' : 'down'}-wide-short"></i>`; renderUI(); }
         function toggleMergeView() { isMergedView = !isMergedView; const btn = document.getElementById('btnMerge'); if(isMergedView) { btn.innerHTML = '<i class="fa-solid fa-layer-group"></i> Merge: ON'; btn.classList.replace('bg-slate-700', 'bg-orange-600'); btn.classList.replace('hover:bg-slate-800', 'hover:bg-orange-700'); } else { btn.innerHTML = '<i class="fa-solid fa-object-group"></i> Merge: OFF'; btn.classList.replace('bg-orange-600', 'bg-slate-700'); btn.classList.replace('hover:bg-orange-700', 'hover:bg-slate-800'); } renderUI(); }
         function handleSearch() { searchTerm = document.getElementById('searchInput').value; renderUI(); }
-        function handleSort(key) { if (currentSort.key === key) { currentSort.direction = currentSort.direction === 'asc' ? 'desc' : 'asc'; } else { currentSort.key = key; currentSort.direction = 'asc'; } renderUI(); }
         function saveToLocal() { localStorage.setItem('tmtp_data', JSON.stringify(globalData)); }
         function saveDataToJSON() { try { if(globalData.length === 0) return showToast("ไม่มีข้อมูล", true); const dataStr = JSON.stringify(globalData, null, 2); const blob = new Blob([dataStr], {type: "application/json"}); const url = URL.createObjectURL(blob); const a = document.createElement('a'); a.href = url; a.download = `TMTP_Backup_${new Date().toISOString().slice(0,10)}.json`; document.body.appendChild(a); a.click(); setTimeout(() => { document.body.removeChild(a); window.URL.revokeObjectURL(url); }, 0); showToast("บันทึกไฟล์เรียบร้อย"); } catch (err) { console.error(err); showToast("เกิดข้อผิดพลาดในการบันทึก", true); } }
         function loadDataFromJSON(event) { const file = event.target.files[0]; if (!file) return; const reader = new FileReader(); reader.onload = function(e) { try { const json = JSON.parse(e.target.result); if (!Array.isArray(json)) throw new Error("ไฟล์ไม่ถูกต้อง (Not Array)"); globalData = sanitizeLoadedData(json); renderUI(); saveToLocal(); showToast("โหลดไฟล์สำเร็จ"); event.target.value = ''; } catch (err) { console.error(err); showToast("ไฟล์ไม่ถูกต้อง", true); } }; reader.readAsText(file); }
         function sanitizeLoadedData(jsonArray) { return jsonArray.map(item => { let rDate; if (item.rawDate) { rDate = new Date(item.rawDate); if (isNaN(rDate.getTime())) rDate = parseDateForSort(item.date || ""); } else { rDate = parseDateForSort(item.date || ""); } return { id: item.id || Math.random().toString(36).substr(2, 9), date: item.date || "-", time: item.time || "", orderId: item.orderId || "-", invoiceId: item.invoiceId || "", qty: Number(item.qty) || 0, base: Number(item.base) || 0, vat: Number(item.vat) || 0, total: Number(item.total) || 0, tracking: item.tracking || "", note: item.note || "", type: item.type || "telepharmacy", rawDate: rDate, isHighlighted: item.isHighlighted || false, isSelected: false }; }); }
         
         function copyTable(tableId) { const table = document.getElementById(tableId); if(!table) return; const clone = document.createElement('table'); clone.style.fontFamily = 'Prompt, sans-serif'; clone.style.fontSize = '14pt'; clone.style.borderCollapse = 'collapse'; const thead = document.createElement('thead'); const headerRow = document.createElement('tr'); ['#', 'Date', 'Order ID', 'Qty', 'Base', 'VAT', 'Total', 'Tracking', 'INV', 'Time', 'Note'].forEach(t => { const th = document.createElement('th'); th.innerText = t; th.style.border = '1px solid #000'; th.style.backgroundColor = '#4CAF50'; th.style.color = '#fff'; th.style.padding = '10px'; th.style.textAlign = 'center'; headerRow.appendChild(th); }); thead.appendChild(headerRow); clone.appendChild(thead); const tbody = document.createElement('tbody'); table.querySelectorAll('tbody tr').forEach(tr => { const newRow = document.createElement('tr'); const inputs = tr.querySelectorAll('input'); const addCell = (val, isText=false, isBold=false, align='center') => { const td = document.createElement('td'); td.innerText = val; td.style.border = '1px solid #ddd'; td.style.padding = '10px'; td.style.textAlign = align; td.style.verticalAlign = 'middle'; if(isText) td.setAttribute('style', td.getAttribute('style') + ' mso-number-format:"\\@"'); if(isBold) td.style.fontWeight = 'bold'; newRow.appendChild(td); }; addCell(tr.cells[1].innerText); addCell(inputs[0].value); addCell(inputs[1].value, true); addCell(inputs[2].value); addCell(inputs[3].value); addCell(inputs[4].value); addCell(inputs[5].value, false, true); addCell(inputs[6].value); addCell(inputs[7].value, true); addCell(inputs[8].value); addCell(inputs[9].value, false, false, 'left'); tbody.appendChild(newRow); }); clone.appendChild(tbody); const container = document.getElementById('copyContainer'); container.innerHTML = ''; container.appendChild(clone); const range = document.createRange(); range.selectNode(clone); window.getSelection().removeAllRanges(); window.getSelection().addRange(range); document.execCommand('copy'); window.getSelection().removeAllRanges(); showToast("คัดลอกตารางแล้ว (Paste ได้เลย)"); }
-        function exportToExcel(filterType) { let items = globalData.filter(i => i.type === filterType); if(items.length === 0) return showToast("ไม่มีข้อมูล", true); generateExcelFile(items, `BillPro_${filterType.toUpperCase()}`); }
-        function exportDaily(type, dateStr, format) { let items = globalData.filter(i => (type === 'mixed' ? true : i.type === type) && i.date === dateStr); if(items.length === 0) return showToast("ไม่มีข้อมูล", true); items.sort((a,b) => a.orderId.localeCompare(b.orderId)); if(format === 'excel') generateExcelFile(items, `BillPro_${type.toUpperCase()}_${dateStr.replace(/\//g,'-')}`); else printReport(items, type, dateStr); }
-        function exportToPDF(filterType) { let items = globalData.filter(i => i.type === filterType); if(items.length === 0) return showToast("ไม่มีข้อมูล", true); items.sort((a,b) => a.rawDate - b.rawDate); printReport(items, filterType, "All Dates"); }
-        function generateExcelFile(items, filename) { let table = `<html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:x="urn:schemas-microsoft-com:office:excel" xmlns="http://www.w3.org/TR/REC-html40"><head><meta charset="UTF-8"></head><body><table border="1"><thead><tr><th>#</th><th>Date</th><th>Order ID</th><th>Qty</th><th>Base</th><th>VAT</th><th>Total</th><th>Tracking</th><th>INV</th><th>Time</th><th>Note</th></tr></thead><tbody>`; items.forEach((i, idx) => { table += `<tr><td>${idx+1}</td><td>${i.date}</td><td style='mso-number-format:"\\@"'>${i.orderId}</td><td>${i.qty}</td><td>${i.base.toFixed(2)}</td><td>${i.vat.toFixed(2)}</td><td>${i.total.toFixed(2)}</td><td>${i.tracking}</td><td style='mso-number-format:"\\@"'>${i.invoiceId}</td><td>${i.time}</td><td>${i.note}</td></tr>`; }); table += `</tbody></table></body></html>`; const blob = new Blob([table], { type: 'application/vnd.ms-excel' }); const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = `${filename}.xls`; document.body.appendChild(a); a.click(); document.body.removeChild(a); }
-        function printReport(items, type, dateStr) { let displayName = type === 'telemed' ? 'MED' : (type === 'mixed' ? 'MERGED' : 'PHARMACY'); let printHTML = `<div class="print-header">รายงานสรุป ${displayName} (${dateStr})</div><table><thead><tr><th>#</th><th>Date</th><th>Order ID</th><th>Qty</th><th align="right">Base</th><th align="right">VAT</th><th align="right">Total</th><th>Track</th><th>INV</th><th>Time</th><th>Note</th></tr></thead><tbody>`; let grandTotal = 0; items.forEach((item, idx) => { grandTotal += item.total; printHTML += `<tr><td align="center">${idx+1}</td><td>${item.date}</td><td>${item.orderId}</td><td align="center">${item.qty}</td><td align="right">${formatMoney(item.base)}</td><td align="right">${formatMoney(item.vat)}</td><td align="right"><b>${formatMoney(item.total)}</b></td><td>${item.tracking}</td><td>${item.invoiceId}</td><td>${item.time}</td><td align="left">${item.note}</td></tr>`; }); printHTML += `<tr class="total-row"><td colspan="6" align="right">รวมทั้งหมด:</td><td align="right">${formatMoney(grandTotal)}</td><td colspan="4"></td></tr></tbody></table>`; const printArea = document.getElementById('printArea'); printArea.innerHTML = printHTML; window.print(); }
     </script>
 </body>
 </html>
